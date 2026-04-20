@@ -60,9 +60,8 @@ slope_up = 1 if st_slope == "Up" else 0
 
 # Feature List (Must match training order)
 features_list = [
-    age, resting_bp, cholesterol, fbs_val, max_hr, oldpeak,
-    sex_m, cp_ata, cp_nap, cp_asy, ecg_st, ecg_lvh, angina_y, 
-    slope_flat, slope_up
+    age,gender,chestpain,restingBP,serumcholestrol,fastingbloodsugar,
+    restingrelectro,maxheartrate,exerciseangia,oldpeak,slope,noofmajorvessels
 ]
 
 input_data = np.array([features_list])
