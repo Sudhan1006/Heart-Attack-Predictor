@@ -47,7 +47,7 @@ with col2:
     st_slope = st.selectbox("ST Slope Type", options=["Up", "Flat", "Down"])
 
 # Encoding Logic
-sex_m = 1 if sex == "M" else 0
+sex_m = 1 if gender == "M" else 0
 fbs_val = 1 if fasting_bs == "Yes" else 0
 angina_y = 1 if ex_angina == "Y" else 0
 cp_ata = 1 if chest_pain == "ATA" else 0
