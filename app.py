@@ -5,103 +5,86 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Page Configuration
-st.set_page_config(page_title="Heart Health AI", page_icon="❤️")
-
-# Title and Description
+# 1. Page Setup
+st.set_page_config(page_title="Heart Attack Predictor", page_icon="❤️")
 st.title("❤️ Heart Attack Risk Predictor")
-st.write("Enter the patient's clinical details to analyze the risk.")
+st.write("Enter clinical details to analyze risk (Optimized for 100% Recall)")
 
-# Loading the saved files
-model = pickle.load(open('heart_model.pkl', 'rb'))
-scaler = pickle.load(open('scaler.pkl', 'rb'))
+# 2. Load Model and Scaler
+@st.cache_resource # Taaki baar-baar load na ho
+def load_assets():
+    model = pickle.load(open('heart_model.pkl', 'rb'))
+    scaler = pickle.load(open('scaler.pkl', 'rb'))
+    return model, scaler
 
-# Layout design
+try:
+    model, scaler = load_assets()
+except Exception as e:
+    st.error(f"Error loading files: Ensure 'heart_model.pkl' and 'scaler.pkl' are in the repository.")
+
+# 3. User Input Layout
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("Numerical Details")
-    age = st.number_input("Age", min_value=1, max_value=110, value=40)
-    resting_bp = st.number_input("Resting Blood Pressure (mm Hg)", min_value=50, max_value=250, value=120)
-    cholesterol = st.number_input("Cholesterol (mg/dl)", min_value=50, max_value=600, value=200)
-    max_hr = st.number_input("Max Heart Rate Achieved", min_value=50, max_value=250, value=150)
-    oldpeak = st.number_input("Oldpeak (ST depression)", min_value=0.0, max_value=10.0, value=0.0, step=0.1)
+    age = st.number_input("Age", min_value=1, max_value=110, value=50)
+    # gender: 1=Male, 0=Female (Matching your X_train)
+    gender = st.selectbox("Gender", options=[1, 0], format_func=lambda x: "Male" if x==1 else "Female")
+    chestpain = st.selectbox("Chest Pain Type (0-3)", options=[0, 1, 2, 3])
+    restingBP = st.number_input("Resting Blood Pressure", value=130)
+    serumcholestrol = st.number_input("Serum Cholestrol", value=240)
+    fastingbloodsugar = st.selectbox("Fasting Blood Sugar > 120 (1=Yes, 0=No)", options=[0, 1])
 
 with col2:
-    st.subheader("Categorical Details")
-    gender = st.selectbox("Gender", options=["M", "F"])
-    
-    # ChestPainType
-    chest_pain = st.selectbox("Chest Pain Type", options=["ATA", "NAP", "ASY", "TA"])
-    
-    # FastingBS
-    fasting_bs = st.selectbox("Fasting Blood Sugar > 120 mg/dl", options=["No", "Yes"])
-    
-    # RestingECG
-    resting_ecg = st.selectbox("Resting ECG Results", options=["Normal", "ST", "LVH"])
-    
-    # ExerciseAngina
-    ex_angina = st.selectbox("Exercise Induced Angina", options=["N", "Y"])
-    
-    # ST_Slope
-    st_slope = st.selectbox("ST Slope Type", options=["Up", "Flat", "Down"])
+    restingrelectro = st.selectbox("Resting Electrocardiographic results (0-2)", options=[0, 1, 2])
+    maxheartrate = st.number_input("Maximum Heart Rate", value=150)
+    exerciseangia = st.selectbox("Exercise Induced Angina (1=Yes, 0=No)", options=[0, 1])
+    oldpeak = st.number_input("Oldpeak (ST depression)", value=1.0, step=0.1)
+    slope = st.selectbox("Slope of ST segment (0-3)", options=[0, 1, 2, 3])
+    noofmajorvessels = st.selectbox("Number of Major Vessels (0-3)", options=[0, 1, 2, 3])
 
-# Encoding Logic
-sex_m = 1 if gender == "M" else 0
-fbs_val = 1 if fasting_bs == "Yes" else 0
-angina_y = 1 if ex_angina == "Y" else 0
-cp_ata = 1 if chest_pain == "ATA" else 0
-cp_nap = 1 if chest_pain == "NAP" else 0
-cp_asy = 1 if chest_pain == "ASY" else 0
-ecg_st = 1 if resting_ecg == "ST" else 0
-ecg_lvh = 1 if resting_ecg == "LVH" else 0
-slope_flat = 1 if st_slope == "Flat" else 0
-slope_up = 1 if st_slope == "Up" else 0
-
-# Feature List (Must match training order)
-features_list = [
-    age,gender,chestpain,restingBP,serumcholestrol,fastingbloodsugar,
-    restingrelectro,maxheartrate,exerciseangia,oldpeak,slope,noofmajorvessels
-]
-
-input_data = np.array([features_list])
-
+# 4. Prediction Logic
 if st.button("Analyze Risk"):
-    # 1. Scaling 
-    input_scaled = scaler.transform(input_data)
-    
-    # 2. Probability
-    prob = model.predict_proba(input_scaled)[:, 1]
-    
-    # 3. Output with 0.45 Threshold
-    if prob[0] >= 0.45:
-        st.error(f"⚠️ High Risk! Probability: {prob[0]:.2f}")
-        st.write("The patient shows symptoms consistent with heart disease.")
-    else:
-        st.success(f"✅ Low Risk. Probability: {prob[0]:.2f}")
-        st.write("Everything looks normal, but always consult a doctor for certainty.")
-
-    # Visualization - Confidence Bar
-    st.write(f"Confidence Level: {prob[0]*100:.1f}%")
-    st.progress(float(prob[0]))
-
-    # Feature Importance Plot
-    st.markdown("---")
-    st.subheader("🔍 Model Decision Insights")
-    st.write("The chart below shows the most important factors for this prediction.")
-
-    importances = model.feature_importances_
-    feature_names = [
-        'Age', 'RestingBP', 'Cholesterol', 'FastingBS', 'MaxHR', 'Oldpeak',
-        'Sex_M', 'ChestPain_ATA', 'ChestPain_NAP', 'ChestPain_ASY', 
-        'RestingECG_ST', 'RestingECG_LVH', 'ExerciseAngina_Y', 
-        'ST_Slope_Flat', 'ST_Slope_Up'
+    # Creating Feature List in EXACT order of your X_train columns
+    features = [
+        age, gender, chestpain, restingBP, serumcholestrol,
+        fastingbloodsugar, restingrelectro, maxheartrate, 
+        exerciseangia, oldpeak, slope, noofmajorvessels
     ]
+    
+    # Converting to DataFrame to keep feature names consistent
+    cols = ['age', 'gender', 'chestpain', 'restingBP', 'serumcholestrol',
+            'fastingbloodsugar', 'restingrelectro', 'maxheartrate', 
+            'exerciseangia', 'oldpeak', 'slope', 'noofmajorvessels']
+    
+    input_df = pd.DataFrame([features], columns=cols)
+    
+    # Scaling
+    input_scaled = scaler.transform(input_df)
+    
+    # Predicting Probability for Custom Threshold (0.45)
+    prob = model.predict_proba(input_scaled)[:, 1][0]
+    
+    # Result Display
+    st.subheader("Result:")
+    if prob >= 0.45:
+        st.error(f"🚨 HIGH RISK (Probability: {prob:.2%})")
+        st.write("The model predicts a high risk of heart attack. Please consult a specialist.")
+    else:
+        st.success(f"✅ LOW RISK (Probability: {prob:.2%})")
+        st.write("The clinical indicators are within a safer range.")
 
-    feat_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
-    feat_df = feat_df.sort_values(by='Importance', ascending=False).head(10)
-
-    fig, ax = plt.subplots()
-    sns.barplot(x='Importance', y='Feature', data=feat_df, ax=ax, palette='viridis')
-    plt.title("Top Contributing Factors")
-    st.pyplot(fig)
+    # 5. Visualization (Feature Importance)
+    st.divider()
+    st.subheader("🔍 Why this result?")
+    try:
+        # Checking if model has feature_importances_ (RandomForest/XGBoost)
+        if hasattr(model, 'feature_importances_'):
+            importances = model.feature_importances_
+            feat_imp = pd.Series(importances, index=cols).sort_values(ascending=True)
+            
+            fig, ax = plt.subplots()
+            feat_imp.tail(10).plot(kind='barh', ax=ax, color='crimson')
+            plt.title("Top Factors Influencing Prediction")
+            st.pyplot(fig)
+    except:
+        st.info("Feature importance visualization is available for Tree-based models.")
