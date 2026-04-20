@@ -29,7 +29,7 @@ with col1:
 
 with col2:
     st.subheader("Categorical Details")
-    sex = st.selectbox("Sex", options=["M", "F"])
+    gender = st.selectbox("Gender", options=["M", "F"])
     
     # ChestPainType
     chest_pain = st.selectbox("Chest Pain Type", options=["ATA", "NAP", "ASY", "TA"])
